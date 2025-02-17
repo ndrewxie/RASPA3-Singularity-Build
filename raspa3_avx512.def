@@ -1,0 +1,34 @@
+Bootstrap: docker
+From: ubuntu:24.04
+Stage: build
+
+%post
+    apt-get -y update
+    apt-get install -y --no-install-recommends git ca-certificates cmake ninja-build
+    apt-get install -y --no-install-recommends llvm lld clang clang-tools clang-tidy libc++-dev libc++abi-dev libomp-dev libclang-rt-dev
+    apt-get install -y --no-install-recommends python3 pybind11-dev python3-pybind11 python3-dev libhdf5-serial-dev
+    apt-get install -y --no-install-recommends liblapack64-dev libblas64-dev
+    
+    git clone --depth=1 https://github.com/iRASPA/RASPA3.git
+    cd RASPA3
+    
+    cmake -D BUILD_TESTING=FALSE -B build --preset=linux-x86_64-skylake-avx512-ubuntu-24
+    ninja -j8 -C build
+    ninja -j8 -C build install
+    #ctest --test-dir build/tests/raspakit-tests --verbose
+
+# Final image
+Bootstrap: docker
+From: ubuntu:24.04
+Stage: final
+
+%files from build
+    /usr/bin/raspa3    /usr/bin/
+
+%post
+    apt-get -y update
+    apt-get install -y --no-install-recommends libomp-dev libhdf5-serial-dev
+    apt-get install -y --no-install-recommends liblapack64-dev libblas64-dev
+
+%runscript
+    /usr/bin/raspa3
